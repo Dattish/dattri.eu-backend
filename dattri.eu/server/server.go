@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"dattri.eu/handler"
@@ -26,15 +29,60 @@ func getCertLocations(filename string) (certLocations, error) {
 	return certLocations, err
 }
 
-func setUpEndpoints(config config, serveMux *http.ServeMux) {
-	endpoints, IOError := ioutil.ReadFile(config["endpoints"])
-	if IOError != nil {
-		log.Fatal("Couldn't read endpoints file: ", IOError)
+func listenOnChanges(endpointsFile string, notifier chan bool) {
+	lastChanged := time.Time{}
+	for {
+		fileInfo, err := os.Stat(endpointsFile)
+		if err != nil {
+			log.Fatal("Couldn't read endpoints file: ", err)
+		}
+
+		changeTimestamp := fileInfo.ModTime()
+
+		if changeTimestamp.After(lastChanged) {
+			lastChanged = changeTimestamp
+			notifier <- true
+		}
+
+		time.Sleep(5 * time.Second)
 	}
-	endpointsError := handler.EndpointsFromConfig(serveMux, endpoints)
-	if endpointsError != nil {
-		log.Fatal("Couldn't set up endpoints: ", endpointsError)
+}
+
+func listenAndServeTLS(config config, certFile string, keyFile string) error {
+	notifier := make(chan bool)
+	conf, err := filepath.Abs(config["endpoints"])
+	if err != nil {
+		return err
 	}
+	go listenOnChanges(conf, notifier)
+	var server *http.Server
+	monitoring := handler.Monitoring(time.Now())
+
+	for range notifier {
+		log.Println("Loading new config..")
+		if server != nil {
+			ctx, _ := context.WithTimeout(context.Background(), time.Duration(10 * time.Second))
+			if err := server.Shutdown(ctx); err != nil {
+				return err
+			}
+		}
+		serveMux := http.NewServeMux()
+		serveMux.Handle("/monitoring", monitoring)
+		endpoints, err := ioutil.ReadFile(config["endpoints"])
+		if err != nil {
+			return fmt.Errorf("couldn't load endpoints file: %v", err)
+		}
+		err = handler.EndpointsFromConfig(serveMux, endpoints)
+		if err != nil {
+			return fmt.Errorf("couldn't set up endpoints: %v", err)
+		}
+		server = &http.Server{Addr: config["httpsPort"],
+			Handler: handler.CSP(config["contentPolicy"],
+				handler.CORS(config["CORSMethods"], config["CORSOrigin"],
+					handler.Logging(serveMux)))}
+		go server.ListenAndServeTLS(certFile, keyFile)
+	}
+	return nil
 }
 
 func getCertFiles(config config) (certFile string, keyFile string) {
@@ -55,23 +103,11 @@ func main() {
 	}
 	json.Unmarshal(configAsBytes, &config)
 
-	serveMux := http.NewServeMux()
-
-	setUpEndpoints(config, serveMux)
-
-	serveMux.Handle("/monitoring", handler.Monitoring(time.Now()))
-
 	certFile, keyFile := getCertFiles(config)
 
 	fmt.Println("Running..")
-
 	go http.ListenAndServe(config["httpPort"], handler.HttpsRedirect())
-	err := http.ListenAndServeTLS(config["httpsPort"], certFile, keyFile,
-			handler.CSP(config["contentPolicy"],
-				handler.CORS(config["CORSMethods"], config["CORSOrigin"],
-					handler.Logging(serveMux))))
-
-	if err != nil {
+	if err := listenAndServeTLS(config, certFile, keyFile); err != nil {
 		log.Fatal(err)
 	}
 }
