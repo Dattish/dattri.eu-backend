@@ -55,6 +55,7 @@ func proxyHandler(serveMux *http.ServeMux, endpoint string, method string, path 
 		}
 
 		request, err := http.NewRequest(method, path + queryParams, bytes.NewBuffer(body))
+		request.Header.Set("Content-Type", r.Header.Get("Content-Type"))
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
