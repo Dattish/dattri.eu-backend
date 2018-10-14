@@ -82,6 +82,12 @@ func proxyHandler(serveMux *http.ServeMux, endpoint string, method string, path 
 	})
 }
 
+func redirectHandler(serveMux *http.ServeMux, endpoint string, path string) {
+	serveMux.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, path, 307)
+	})
+}
+
 //Sets up endpoints for files and directories based on a json in []byte format
 //Note that directory endpoints needs to begin and end with a slash, i.e "/test/"
 func EndpointsFromConfig(serveMux *http.ServeMux, rawJson []byte) error {
@@ -102,6 +108,8 @@ func EndpointsFromConfig(serveMux *http.ServeMux, rawJson []byte) error {
 			}
 		case "proxy":
 			proxyHandler(serveMux, endpoint["endpoint"], endpoint["method"], endpoint["path"])
+		case "redirect":
+			redirectHandler(serveMux, endpoint["endpoint"], endpoint["path"])
 		default:
 			return &endpointError{fmt.Sprintf("No such resourceType: %s", resourceType)}
 		}
