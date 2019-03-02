@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"dattri.eu/handler"
+	"trieu.io/handler"
 )
 
 type config map[string]string
