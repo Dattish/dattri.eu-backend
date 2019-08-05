@@ -57,6 +57,7 @@ func listenAndServeTLS(config config, certFile string, keyFile string) error {
 	go listenOnChanges(conf, notifier)
 	var server *http.Server
 	monitoring := handler.Monitoring(time.Now())
+	ping := handler.Ping()
 
 	for range notifier {
 		log.Println("Loading new config..")
@@ -68,6 +69,8 @@ func listenAndServeTLS(config config, certFile string, keyFile string) error {
 		}
 		serveMux := http.NewServeMux()
 		serveMux.Handle("/monitoring", monitoring)
+		serveMux.Handle("/monitoring/ping", ping)
+
 		endpoints, err := ioutil.ReadFile(config["endpoints"])
 		if err != nil {
 			return fmt.Errorf("couldn't load endpoints file: %v", err)

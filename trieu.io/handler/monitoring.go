@@ -10,26 +10,26 @@ import (
 )
 
 type monitoring struct {
-	Version         string
-	Compiler        string
-	OperatingSystem string
-	NumGoroutines   int
-	NumCPUs         int
-	MaxCPUs         int
-	MemStats		memStats
-	Uptime          string
+	Version         string   `json:"version"`
+	Compiler        string   `json:"compiler"`
+	OperatingSystem string   `json:"operatingSystem"`
+	NumGoroutines   int      `json:"numGoroutines"`
+	NumCPUs         int      `json:"numCPUs"`
+	MaxCPUs         int      `json:"maxCPUs"`
+	MemStats        memStats `json:"memStats"`
+	Uptime          string   `json:"uptime"`
 }
 
 type memStats struct {
-	Alloc uint64
-	TotalAlloc uint64
-	HeapSize uint64
-	HeapUsed uint64
-	HeapUnused uint64
-	Lookups uint64
-	Mallocs uint64
-	Frees uint64
-	TotalGCTime string
+	Alloc       uint64 `json:"alloc"`
+	TotalAlloc  uint64 `json:"totalAlloc"`
+	HeapSize    uint64 `json:"heapSize"`
+	HeapUsed    uint64 `json:"heapUsed"`
+	HeapUnused  uint64 `json:"heapUnused"`
+	Lookups     uint64 `json:"lookups"`
+	Mallocs     uint64 `json:"mallocs"`
+	Frees       uint64 `json:"frees"`
+	TotalGCTime string `json:"totalGCTime"`
 }
 
 func Monitoring(startTime time.Time) http.Handler {
@@ -64,6 +64,12 @@ func Monitoring(startTime time.Time) http.Handler {
 		if err != nil {
 			log.Println("Couldn't create process info:", err)
 		}
-		fmt.Fprintf(w, string(data[:]))
+		_, _ = fmt.Fprintf(w, string(data[:]))
+	})
+}
+
+func Ping() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		_, _ = fmt.Fprintf(w, "pong")
 	})
 }
