@@ -14,7 +14,7 @@ import (
 	"trieu.io/handler"
 )
 
-type config map[string]string
+type config map[string]interface{}
 
 type certLocations struct {
 	Cert    string `json:"cert"`
@@ -50,7 +50,7 @@ func listenOnChanges(endpointsFile string, notifier chan bool) {
 
 func listenAndServeTLS(config config, certFile string, keyFile string) error {
 	notifier := make(chan bool)
-	conf, err := filepath.Abs(config["endpoints"])
+	conf, err := filepath.Abs(config["endpoints"].(string))
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func listenAndServeTLS(config config, certFile string, keyFile string) error {
 		serveMux.Handle("/monitoring", monitoring)
 		serveMux.Handle("/monitoring/ping", ping)
 
-		endpoints, err := ioutil.ReadFile(config["endpoints"])
+		endpoints, err := ioutil.ReadFile(config["endpoints"].(string))
 		if err != nil {
 			return fmt.Errorf("couldn't load endpoints file: %v", err)
 		}
@@ -79,9 +79,16 @@ func listenAndServeTLS(config config, certFile string, keyFile string) error {
 		if err != nil {
 			return fmt.Errorf("couldn't set up endpoints: %v", err)
 		}
-		server = &http.Server{Addr: config["httpsPort"],
-			Handler: handler.CSP(config["contentPolicy"],
-				handler.CORS(config["CORSMethods"], config["CORSOrigin"],
+
+		untypedGarbage := config["CORSExceptions"].([]interface{})
+		corsExceptions := make([]string, len(untypedGarbage))
+		for i, v := range untypedGarbage {
+			corsExceptions[i] = v.(string)
+		}
+
+		server = &http.Server{Addr: config["httpsPort"].(string),
+			Handler: handler.CSP(config["contentPolicy"].(string), corsExceptions,
+				handler.CORS(config["CORSMethods"].(string), config["CORSOrigin"].(string), corsExceptions,
 					handler.Logging(serveMux)))}
 		go server.ListenAndServeTLS(certFile, keyFile)
 	}
@@ -89,7 +96,7 @@ func listenAndServeTLS(config config, certFile string, keyFile string) error {
 }
 
 func getCertFiles(config config) (certFile string, keyFile string) {
-	certs, certErr := getCertLocations(config["certLocations"])
+	certs, certErr := getCertLocations(config["certLocations"].(string))
 	if certErr != nil {
 		log.Fatal("Couldn't get cert locations: ", certErr)
 	}
@@ -109,7 +116,7 @@ func main() {
 	certFile, keyFile := getCertFiles(config)
 
 	fmt.Println("Running..")
-	go http.ListenAndServe(config["httpPort"], handler.HttpsRedirect())
+	go http.ListenAndServe(config["httpPort"].(string), handler.HttpsRedirect())
 	if err := listenAndServeTLS(config, certFile, keyFile); err != nil {
 		log.Fatal(err)
 	}
