@@ -37,7 +37,9 @@ func CSP(policy string, exceptions []string, handler http.Handler) http.Handler 
 func Logging(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		defer log.Printf("[%s] %s: %s | %v", r.RemoteAddr, r.Method, r.URL, time.Since(start))
+		if r.URL.String() != "/monitoring" {
+			defer log.Printf("[%s] %s: %s | %v", r.RemoteAddr, r.Method, r.URL, time.Since(start))
+		}
 		handler.ServeHTTP(w, r)
 	})
 }
