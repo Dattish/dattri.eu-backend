@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"trieu.io/handler"
+	"github.com/dattish/trieu.io-backend/handler"
 )
 
 type config map[string]interface{}
