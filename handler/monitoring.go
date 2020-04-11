@@ -18,6 +18,7 @@ type monitoring struct {
 	MaxCPUs         int      `json:"maxCPUs"`
 	MemStats        memStats `json:"memStats"`
 	Uptime          string   `json:"uptime"`
+	StartTimestamp  int64    `json:"startTimestamp"`
 }
 
 type memStats struct {
@@ -58,6 +59,7 @@ func Monitoring(startTime time.Time) http.Handler {
 			runtime.GOMAXPROCS(-1),
 			memStats,
 			time.Since(timeStarted).String(),
+			startTime.Unix() * 1000,
 		}
 
 		data, err := json.MarshalIndent(monitoring, "", "    ")

@@ -56,7 +56,7 @@ func listenAndServeTLS(config config, certFile string, keyFile string) error {
 	}
 	go listenOnChanges(conf, notifier)
 	var server *http.Server
-	monitoring := handler.Monitoring(time.Now())
+	monitoring := handler.Monitoring(time.Now().UTC())
 	ping := handler.Ping()
 
 	for range notifier {
