@@ -10,10 +10,10 @@ import (
 	"testing"
 )
 
-func testHandler(w http.ResponseWriter, r *http.Request) {
+func testHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	io.WriteString(w, `{"alive": true}`)
+	_, _ = io.WriteString(w, `{"alive": true}`)
 }
 
 func TestCORS(t *testing.T) {
@@ -26,16 +26,16 @@ func TestCORS(t *testing.T) {
 
 	allowedMethods := "GET"
 	allowedOrigin := "localhost"
-	handler := CORS(allowedMethods, allowedOrigin, http.HandlerFunc(testHandler))
+	handler := CORS(allowedMethods, allowedOrigin, []string{}, http.HandlerFunc(testHandler))
 
 	handler.ServeHTTP(recorder, req)
 
-	if methods := recorder.HeaderMap.Get("Access-Control-Allow-Methods"); methods != allowedMethods {
+	if methods := recorder.Header().Get("Access-Control-Allow-Methods"); methods != allowedMethods {
 		t.Errorf("Handler did not return correct Access-Control-Allow-Methods: got %v want %v",
 			methods, allowedMethods)
 	}
 
-	if origin := recorder.HeaderMap.Get("Access-Control-Allow-Origin"); origin != allowedOrigin {
+	if origin := recorder.Header().Get("Access-Control-Allow-Origin"); origin != allowedOrigin {
 		t.Errorf("Handler did not return correct Access-Control-Allow-Origin: got %v want %v",
 			origin, allowedOrigin)
 	}
@@ -50,11 +50,11 @@ func TestCSP(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
 	expectedPolicy := "default-src 'self'"
-	handler := CSP(expectedPolicy, http.HandlerFunc(testHandler))
+	handler := CSP(expectedPolicy, []string{}, http.HandlerFunc(testHandler))
 
 	handler.ServeHTTP(recorder, req)
 
-	if policy := recorder.HeaderMap.Get("Content-Security-Policy"); policy != expectedPolicy {
+	if policy := recorder.Header().Get("Content-Security-Policy"); policy != expectedPolicy {
 		t.Errorf("Handler did not return correct Access-Control-Allow-Methods: got %v want %v",
 			policy, expectedPolicy)
 	}

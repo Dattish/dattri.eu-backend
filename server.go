@@ -24,7 +24,7 @@ type certLocations struct {
 func getCertLocations(filename string) (certLocations, error) {
 	raw, err := ioutil.ReadFile(filename)
 	var certLocations certLocations
-	json.Unmarshal(raw, &certLocations)
+	_ = json.Unmarshal(raw, &certLocations)
 
 	return certLocations, err
 }
@@ -111,7 +111,7 @@ func main() {
 	if configIOError != nil {
 		log.Fatal("Couldn't read config file: ", configIOError)
 	}
-	json.Unmarshal(configAsBytes, &config)
+	_ = json.Unmarshal(configAsBytes, &config)
 
 	certFile, keyFile := getCertFiles(config)
 
